@@ -14,7 +14,8 @@
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/bower_components/crypto-js/crypto-js.js"></script>
+    <script type="text/javascript" src="/bower_components/crypto-js/crypto-js.js"></script>
+    <script type="text/javascript" src="/node_modules/moment/moment.js"></script>
     <style media="screen">
       body{
         margin-top: 30px;
@@ -31,11 +32,13 @@
       .timestamp{
           position: absolute;
           bottom: -1px;
-          right: 0;
+          right: -1px;
           border-bottom-right-radius: 0;
           border-bottom-left-radius: 0;
           border-top-right-radius: 0;
-          cursor: default;
+          border-top-left-radius: 5px;
+          color: gray;
+          background-color: lightgray;
       }
     </style>
 
@@ -58,8 +61,8 @@
               <ul class="list-group" id="rooms">
                 <li class="list-group-item" id="Room1">Room 1 <br/>
                   <div class="btn-group" data-toggle="buttons">
-                   <input type="button" class="btn btn-primary btn slot0" data-slot="0" value="Join">
-                   <input type="button" class="btn btn-primary btn slot1" data-slot="1" value="Join">
+                   <input type="button" class="btn btn-primary btn slot0 slot" data-slot="0" value="Join">
+                   <input type="button" class="btn btn-primary btn slot1 slot" data-slot="1" value="Join">
                   </div>
                 </li>
               </ul>
@@ -80,8 +83,6 @@
                     <input type="text" autocomplete="off" class="form-control" id="username" placeholder="Username"/>
                     <input type="password" autocomplete="off" class="form-control" id="password" placeholder="Password"/>
                     <h5><small>If account does not exist it will be created the first time you sign in</small></h5>
-                    <br />
-                    <br />
                   </div>
                   <input type="submit" class="btn btn-primary" value="Login" />
                 </div>
@@ -133,13 +134,9 @@
         $template.data("room", roomNum)
         $template.find(".slot0").val(slot0)
         $template.find(".slot1").val(slot1)
-        if (slot0 !== "Join"){
-          $template.find(".slot0").attr("active")
-        }
-        if (slot1 !== "Join"){
-          $template.find(".slot1").attr("active")
-        }
       $('#rooms').append($template.clone())
+      $(".slot[value!='Join']").addClass("active");
+        
     }
     function clearRooms(){
       $('#rooms').html("")
@@ -205,14 +202,13 @@
 
    //adds new messages to the chat
    socket.on('new message', function(data) {
-     var messageData = '<li class="list-group-item"><strong>' + data.user + '</strong>: ' + data.msg + '<input type="button" class="btn btn-xs timestamp" disabled="disabled" value="timestamp"></li>'
-     $(messageData).find('input').val(data.timestamp);
+     var messageData = '<li class="list-group-item message"><strong>' + data.user + '</strong>: ' + data.msg + '<span class="label label-default timestamp">'+moment.unix(data.time).format('h:mm:ss a, MMMM Do YYYY')+'</span></li>'
      $(messageData).appendTo('#chat').hide().slideDown("fast",function(){
        $('.timestamp').css( 'cursor', 'defualt' );
        $('html, body').animate({
         scrollTop: $(document).height()
     });
-     });
+     })
 
 
    });
@@ -268,12 +264,11 @@
      if (gotChats === 0) {
        i = 0;
        data = data.reverse()
-
+       
        if ($('#chat >div').length < 10) {
          for (items in data) {
            item = data[i];
-           console.log(item)
-           $chat.append('<li class="list-group-item"><strong>' + item.user + '</strong>: ' + item.msg + '<input type="button" class="btn btn-xs timestamp" disabled="disabled" cursor="defualt" value="timestamp"></li>');
+           $chat.append('<li class="list-group-item message "><strong>' + item.user + '</strong>: ' + item.msg + '<span class="label label-default timestamp">'+moment.unix(item.time).format('h:mm:ss a, MMMM Do YYYY')+'</span></li>');
            $('.timestamp').css( 'cursor', 'default' );
            $(window).scrollTop($(document).height());
            i++;

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,8 +13,11 @@
     "crypto-js": "^3.1.9-1",
     "express": "*",
     "http": "*",
+    "moment": "^2.17.1",
     "mongodb": "*",
     "mongojs": "^2.4.0",
+    "nodemon": "^1.11.0",
+    "now-logs": "0.0.7",
     "socket.io": "^1.7.3"
   }
 }

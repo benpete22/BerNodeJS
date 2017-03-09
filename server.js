@@ -1,12 +1,11 @@
 const express = require('express');
 const path = require('path');
-
+require('now-logs')('Bernard')
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
 var CryptoJS = require("crypto-js");
 users = [];
-rooms = [{room:0, slot0:"Join", slot1:"Join"}];
 var userIDs = null
 var userQuery = null
 connections = [];
@@ -21,7 +20,11 @@ function getLastMessages(){
     io.sockets.emit('get chats', logs);
   });
 }
-
+function resetRooms(){
+  db.users.update({},{$unset :{room:true, slot:true}},{multi:true})
+  rooms = [{room:0, slot0:"Join", slot1:"Join"}];
+  io.sockets.emit('update rooms', rooms)
+}
 
 
 
@@ -29,6 +32,7 @@ function getLastMessages(){
 
 //starts the Node Server
 server.listen(3305);
+resetRooms()
 console.log("server running on port 3305");
 
 //serves the index.html file
@@ -44,6 +48,23 @@ app.get('/DC', function(req, res){
 //sets up the static dependancy folders to be served
 app.use(express.static(__dirname + '/public'));
 app.use('/bower_components',  express.static(__dirname + '/bower_components'));
+app.use('/node_modules',  express.static(__dirname + '/node_modules'));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -79,7 +100,7 @@ io.sockets.on('connection', function(socket){
       resetRooms()
     }
     else{
-    io.sockets.emit('new message', {msg:data, user:socket.username});
+    io.sockets.emit('new message', {msg:data, user:socket.username, time: Date.now() / 1000 | 0});
     db.chatlog.insert({msg:data, user:socket.username, time: Date.now() / 1000 | 0});
     }
   }
@@ -89,32 +110,28 @@ io.sockets.on('connection', function(socket){
    //Room selector
    socket.on('choose room', function(data){
      leaveRooms()
-     
      if (typeof rooms[data.room] === 'undefined'){
        rooms.push({room:data.room, slot0:"Join", slot1:"Join"})
      }
-     
+
      if (data.slot === 1 && rooms[data.room].slot1 === "Join"){
        rooms[data.room].slot1 = socket.username;
        console.log("Room "+data.room+ " Slot "+ data.slot+ " taken by "+ rooms[data.room].slot1)
+       setUserRoom(data.room, data.slot)
      }
      if (data.slot === 0 && rooms[data.room].slot0 === "Join"){
        rooms[data.room].slot0 = socket.username;
        console.log("Room "+data.room+ " Slot "+ data.slot+ " taken by "+ rooms[data.room].slot0)
+       setUserRoom(data.room, data.slot)
      }
 
-     
+
       //sends list of rooms as objects formatted like {room:data.room, slot0:"Join", slot1:"Join"}
      io.sockets.emit('update rooms', rooms);
   });
-  
-  //adds new room
-  socket.on('new room', function(data){
-    rooms.push({room:rooms[rooms.length-1].room+1, slot0:"Join", slot1:"Join"})
-  });
-  
-  
-  
+
+
+
 
   //login
   socket.on('login', function(data, callback){
@@ -168,6 +185,7 @@ io.sockets.on('connection', function(socket){
     }
   });
 
+  
 
       //sends current list of usernames to the client
     function updateUsernames(){
@@ -185,16 +203,18 @@ io.sockets.on('connection', function(socket){
        setTimeout(dcNoName, 1500);
        clearUsers =1;
     }
+  
     function leaveRooms(){
       for (var i = 0, len = rooms.length; i < len; i++) {
         console.log("Removed "+ socket.username+" from all rooms")
+        db.users.update({username:socket.username},{$unset :{room:"", slot:""}})
         if (rooms[i].slot1 === socket.username){rooms[i].slot1 = "Join"}
         if (rooms[i].slot0 === socket.username){rooms[i].slot0 = "Join"}
       }
     }
-    function resetRooms(){
-      rooms = [{room:0, slot0:"Join", slot1:"Join"}];
-      io.sockets.emit('update rooms', rooms)
+    function setUserRoom(room, slot){
+      console.log({username:socket.username},{room:room, slot:slot})
+      db.users.update({username:socket.username},{$set :{room:room, slot:slot}})
     }
 
 
