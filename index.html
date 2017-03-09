@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Io Chat</title>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/bower_components/crypto-js/crypto-js.js"></script>
+    <style media="screen">
+      body{
+        margin-top: 30px;
+      }
+      #messageForm{
+        display:none;
+      }
+      #roomsArea{
+        display:none;
+      }
+      .fixed{ position: fixed;}
+      #chat{ display: block;}
+      #loginMessage{color:red;}
+      .timestamp{
+          position: absolute;
+          bottom: -1px;
+          right: 0;
+          border-bottom-right-radius: 0;
+          border-bottom-left-radius: 0;
+          border-top-right-radius: 0;
+          cursor: default;
+      }
+    </style>
+
+
+
+  </head>
+  <body>
+    <div class="container">
+      <div class="row" id="messageArea">
+        <div class="col-xs-3">
+          <div class="fixed">
+            <div class="well">
+             <h3>Online Users</h3>
+             <ul class="list-group" id="users"></ul>
+            </div>
+            <br />
+            <br />
+            <div class="well" id="roomsArea">
+             <h3>Rooms</h3>
+              <ul class="list-group" id="rooms">
+                <li class="list-group-item" id="Room1">Room 1 <br/>
+                  <div class="btn-group" data-toggle="buttons">
+                   <input type="button" class="btn btn-primary btn slot0" data-slot="0" value="Join">
+                   <input type="button" class="btn btn-primary btn slot1" data-slot="1" value="Join">
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-9">
+          <div class="chat" id="chat">
+            <ul class="list-group" id="chatmessage"></ul>
+          </div>
+          <div id="userFormArea" class="row">
+            <div class="col-xs-12">
+              <form id="userForm" autocomplete="off">
+                <div class="form-group">
+
+                  <label>Sign in: </label>
+                  <div class="form-inline">
+                    <input type="text" autocomplete="off" class="form-control" id="username" placeholder="Username"/>
+                    <input type="password" autocomplete="off" class="form-control" id="password" placeholder="Password"/>
+                    <h5><small>If account does not exist it will be created the first time you sign in</small></h5>
+                    <br />
+                    <br />
+                  </div>
+                  <input type="submit" class="btn btn-primary" value="Login" />
+                </div>
+              </form>
+            </div>
+          </div>
+          <form id="messageForm" autocomplete="off">
+            <div class="form-group">
+              <label>Enter Message</label>
+              <input type="text" class="form-control" id="message" />
+              <br />
+              <input type="submit" class="btn btn-primary" value="Send Message" />
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+
+
+
+
+
+  var gotChats = 0;
+  var username = null;
+  var $template = $('#Room1').clone()
+  function addRoom(roomNum, slot0, slot1){
+      var cache = $template.children();
+        var roomNumText =  roomNum +1
+        $template.text('Room '+ roomNumText).append(cache);
+        $template.attr("id","Room"+roomNum)
+        $template.data("room", roomNum)
+        $template.find(".slot0").val(slot0)
+        $template.find(".slot1").val(slot1)
+        if (slot0 !== "Join"){
+          $template.find(".slot0").attr("active")
+        }
+        if (slot1 !== "Join"){
+          $template.find(".slot1").attr("active")
+        }
+      $('#rooms').append($template.clone())
+    }
+    function clearRooms(){
+      $('#rooms').html("")
+    }
+
+
+
+
+
+  $('#password').tooltip({'trigger':'focus', 'title': 'Passwords are hashed with the username before being sent to the server and are never stored or sent in plaintext'});
+  $(function() {
+   var $template = $('#Room1').clone()
+   var socket = io.connect();
+   var $messageForm = $('#messageForm');
+   var $message = $('#message');
+   var $chat = $('#chat');
+   var $chatmessage = $('#chatmessage');
+   var $userForm = $('#userForm');
+   var $userFormArea = $('#userFormArea');
+   var $messageArea = $('#messageArea');
+   var $users = $('#users');
+   var $username = $('#username');
+   var $password = $('#password');
+   var $roomsArea = $('#roomsArea');
+
+
+
+    // sends the server the room selection
+   $(document).on("click", '#roomsArea :button', function(e) {
+     e.preventDefault()
+     socket.emit('choose room', {
+       username: username,
+       slot: $(this).data("slot"),
+       room: $(this).closest("li").prevAll().length
+     });
+   });
+
+
+
+
+
+
+
+    //updates the rooms with the list from the server
+   socket.on('update rooms', function(rooms) {
+     clearRooms()
+     for (var i = 0, len = rooms.length; i < len; i++) {
+       //{room:data.room, slot0:"Join", slot1:"Join"}
+       addRoom(rooms[i].room, rooms[i].slot0, rooms[i].slot1)
+     }
+   });
+
+
+   //handles submitting/sending new messages to the server
+   $messageForm.submit(function(e) {
+     e.preventDefault();
+     if ($message.val() != '') {
+       socket.emit('send message', $message.val());
+       $message.val('');
+     }
+   });
+
+
+   //adds new messages to the chat
+   socket.on('new message', function(data) {
+     var messageData = '<li class="list-group-item"><strong>' + data.user + '</strong>: ' + data.msg + '<input type="button" class="btn btn-xs timestamp" disabled="disabled" value="timestamp"></li>'
+     $(messageData).find('input').val(data.timestamp);
+     $(messageData).appendTo('#chat').hide().slideDown("fast",function(){
+       $('.timestamp').css( 'cursor', 'defualt' );
+       $('html, body').animate({
+        scrollTop: $(document).height()
+    });
+     });
+
+
+   });
+
+
+
+
+
+   //submits login
+   $userForm.submit(function(e) {
+     e.preventDefault();
+     var password = $password;
+     //encrypts the password if a password is set
+     if ($password.val() != "") {
+       password = CryptoJS.HmacSHA512($password.val(), $username.val().trim()).toString()
+     } else {
+       password = "unset"
+     }
+     socket.emit('login', {
+       username: $username.val().trim(),
+       password: password
+     }, function(data) {
+       if (data) {
+         username = $username.val().trim();
+         $userFormArea.hide();
+         $messageForm.show();
+         $message.focus();
+         $roomsArea.show();
+       } else {
+         $userFormArea.prepend("<div id=loginMessage> Login Failed. Please Try Again.</div>")
+         $userForm.addClass('has-error');
+
+       }
+       $password.val('');
+     });
+   });
+
+
+
+
+   //updates the Online Users list
+   socket.on('get users', function(data) {
+     var html = '';
+     for (i = 0; i < data.length; i++) {
+       html += '<li class="list-group-item">' + data[i] + '</li>';
+     }
+     $users.html(html);
+   });
+
+
+   //loads the last 10 messages in the DB the first time you connect
+   socket.on('get chats', function(data) {
+     if (gotChats === 0) {
+       i = 0;
+       data = data.reverse()
+
+       if ($('#chat >div').length < 10) {
+         for (items in data) {
+           item = data[i];
+           console.log(item)
+           $chat.append('<li class="list-group-item"><strong>' + item.user + '</strong>: ' + item.msg + '<input type="button" class="btn btn-xs timestamp" disabled="disabled" cursor="defualt" value="timestamp"></li>');
+           $('.timestamp').css( 'cursor', 'default' );
+           $(window).scrollTop($(document).height());
+           i++;
+         }
+       }
+       gotChats = 1;
+     }
+   });
+
+
+   //was originally going to DC users with no name but now DC's anybody when the server restarts
+   socket.on('no name disconnect', function(data) {
+     socket.disconnect()
+     location.href = data;
+   });
+
+
+
+
+
+
+ });
+</script>
+
+  </body>
+</html>
