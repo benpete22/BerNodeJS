@@ -11,7 +11,7 @@ var userQuery = null
 connections = [];
 var clearUsers = 0;
 
-
+//test
 
 var db = require("mongojs")("mongodb://localhost:27017/chatlog", ["chatlog","users"]);
 

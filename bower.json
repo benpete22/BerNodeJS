@@ -1,0 +1,21 @@
+{
+  "name": "chatio",
+  "description": "",
+  "main": "server.js",
+  "authors": [
+    "Ben Petermeier <ben@benpete.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/benpete22/BerNodeJS",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "crypto-js": "^3.1.9"
+  }
+}
